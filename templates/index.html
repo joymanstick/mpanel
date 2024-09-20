@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Dados - Web</title>
+    <style>
+        /* Estilo Dark Mode */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #ffffff;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .form-container, .data-container, .details-container {
+            background-color: #2b2b2b;
+            padding: 20px;
+            border-radius: 8px;
+            width: 30%;
+        }
+
+        .form-container label, .form-container input, .form-container button {
+            width: 100%;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input {
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3c3c3c;
+            color: #f0f0f0;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #1e90ff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #007acc;
+        }
+
+        .data-container, .details-container {
+            height: 550px;
+            overflow-y: auto;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            background-color: #3c3c3c;
+            color: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
+            resize: none;
+        }
+
+        /* Estilo para os dados armazenados */
+        .data-item {
+            background-color: #3c3c3c;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-item span {
+            display: block;
+            word-wrap: break-word;
+            max-width: 85%;
+        }
+
+        .delete-button {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+
+        .delete-button:hover {
+            background-color: #ff0000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sistema de Dados</h1>
+    
+    <div class="container">
+        <!-- Seção de Formulário -->
+        <div class="form-container">
+            <h2>Formulário</h2>
+            <form id="formDados">
+                <label for="email">E-mail:</label>
+                <input type="email" id="email" name="email" required><br>
+
+                <label for="plano">Plano Investido:</label>
+                <input type="text" id="plano" name="plano" required><br>
+
+                <label for="comecou">Começou com quanto:</label>
+                <input type="number" id="comecou" name="comecou" required><br>
+
+                <label for="saldo">Saldo Total:</label>
+                <input type="number" id="saldo" name="saldo" required><br>
+
+                <button type="submit">Armazenar Dados</button>
+            </form>
+
+            <label for="token">Buscar por Token:</label>
+            <input type="text" id="token" name="token"><br>
+            <button id="buscarToken">Buscar</button>
+        </div>
+
+        <!-- Seção de Dados Armazenados -->
+        <div class="data-container">
+            <h2>Dados Armazenados</h2>
+            <div id="listaDados">Nenhum dado armazenado ainda.</div>
+        </div>
+
+        <!-- Seção de Detalhes -->
+        <div class="details-container">
+            <h2>Detalhes</h2>
+            <textarea id="detalhes" readonly></textarea>
+            <button id="limparDetalhes">Limpar Detalhes</button>
+            <button id="salvarDetalhes">Salvar/Concluir</button>
+        </div>
+
+    <script>
+        const formDados = document.getElementById('formDados');
+        const listaDados = document.getElementById('listaDados');
+        const detalhes = document.getElementById('detalhes');
+        const tokenInput = document.getElementById('token');
+        const buscarTokenButton = document.getElementById('buscarToken');
+        const limparDetalhesButton = document.getElementById('limparDetalhes');
+        const salvarDetalhesButton = document.getElementById('salvarDetalhes');
+        let currentToken = null;  // Guarda o token atual sendo editado
+
+        // Função para armazenar dados
+        formDados.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const formData = new FormData(formDados);
+
+            const response = await fetch('/armazenar_dados', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            alert(result.message);
+            atualizarLista();
+        });
+
+        // Função para buscar por token
+        buscarTokenButton.addEventListener('click', async function() {
+            const formData = new FormData();
+            formData.append('token', tokenInput.value);
+
+            const response = await fetch('/buscar_por_token', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (result.message) {
+                detalhes.value = result.message;
+            } else {
+                currentToken = result.Token;
+                detalhes.removeAttribute('readonly'); // Permitir edição
+                detalhes.value = `E-mail: ${result['E-mail']}\nPlano Investido: ${result['Plano Investido']}\nComeçou com quanto: ${result['Começou com quanto']}\nSaldo Total: ${result['Saldo Total']}`;
+            }
+        });
+
+        // Função para limpar os detalhes
+        limparDetalhesButton.addEventListener('click', function() {
+            detalhes.value = '';
+            detalhes.setAttribute('readonly', true);
+            currentToken = null;
+        });
+
+        // Função para salvar os detalhes editados
+        salvarDetalhesButton.addEventListener('click', async function() {
+            if (currentToken) {
+                const detalhesEditados = detalhes.value.split('\n');
+                const email = detalhesEditados[0].split(': ')[1];
+                const plano = detalhesEditados[1].split(': ')[1];
+                const comecou = detalhesEditados[2].split(': ')[1];
+                const saldo = detalhesEditados[3].split(': ')[1];
+
+                const formData = new FormData();
+                formData.append('token', currentToken);
+                formData.append('email', email);
+                formData.append('plano', plano);
+                formData.append('comecou', comecou);
+                formData.append('saldo', saldo);
+
+                const response = await fetch('/atualizar_dado', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                alert(result.message);
+                detalhes.setAttribute('readonly', true);
+                currentToken = null;
+                atualizarLista();
+            }
+        });
+
+        // Função para atualizar a lista de dados
+        async function atualizarLista() {
+            const response = await fetch('/armazenar_dados', {
+                method: 'GET'
+            });
+            const data = await response.json();
+
+            listaDados.innerHTML = ''; // Limpa a lista
+
+            if (data.length > 0) {
+                data.forEach(dado => {
+                    const item = document.createElement('div');
+                    item.classList.add('data-item');
+                    item.innerHTML = `
+                        <span>Token: ${dado.Token}<br>E-mail: ${dado['E-mail']}</span>
+                        <button class="delete-button" data-token="${dado.Token}">X</button>
+                    `;
+                    listaDados.appendChild(item);
+                });
+            } else {
+                listaDados.textContent = 'Nenhum dado armazenado ainda.';
+            }
+
+            // Adicionar evento para os botões de exclusão
+            document.querySelectorAll('.delete-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const token = this.getAttribute('data-token');
+                    const formData = new FormData();
+                    formData.append('token', token);
+
+                    const response = await fetch('/deletar_dado', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    alert(result.message);
+                    atualizarLista();
+                });
+            });
+        }
+
+        atualizarLista();
+    </script>
+</body>
+</html>
